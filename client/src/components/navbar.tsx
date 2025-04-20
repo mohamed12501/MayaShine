@@ -14,28 +14,28 @@ export function Navbar() {
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center">
           <Link href="/">
-            <a className="text-2xl md:text-3xl font-playfair text-gray-900 no-underline">
+            <span className="text-2xl md:text-3xl font-playfair text-gray-900 no-underline cursor-pointer">
               MAYA <span className="text-primary">Jewelry</span>
-            </a>
+            </span>
           </Link>
         </div>
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex space-x-6 font-montserrat text-sm">
           <Link href="/">
-            <a className="hover:text-primary transition duration-300">Home</a>
+            <span className="hover:text-primary transition duration-300 cursor-pointer">Home</span>
           </Link>
           <Link href="/#order">
-            <a className="hover:text-primary transition duration-300">Custom Order</a>
+            <span className="hover:text-primary transition duration-300 cursor-pointer">Custom Order</span>
           </Link>
           <Link href="/#collection">
-            <a className="hover:text-primary transition duration-300">Collection</a>
+            <span className="hover:text-primary transition duration-300 cursor-pointer">Collection</span>
           </Link>
           <Link href="/#about">
-            <a className="hover:text-primary transition duration-300">About</a>
+            <span className="hover:text-primary transition duration-300 cursor-pointer">About</span>
           </Link>
           <Link href="/#contact">
-            <a className="hover:text-primary transition duration-300">Contact</a>
+            <span className="hover:text-primary transition duration-300 cursor-pointer">Contact</span>
           </Link>
         </div>
         
@@ -51,19 +51,19 @@ export function Navbar() {
             <SheetContent>
               <div className="flex flex-col space-y-4 mt-8">
                 <Link href="/" onClick={handleClose}>
-                  <a className="px-4 py-2 text-lg hover:text-primary transition duration-300">Home</a>
+                  <span className="px-4 py-2 text-lg hover:text-primary transition duration-300 block cursor-pointer">Home</span>
                 </Link>
                 <Link href="/#order" onClick={handleClose}>
-                  <a className="px-4 py-2 text-lg hover:text-primary transition duration-300">Custom Order</a>
+                  <span className="px-4 py-2 text-lg hover:text-primary transition duration-300 block cursor-pointer">Custom Order</span>
                 </Link>
                 <Link href="/#collection" onClick={handleClose}>
-                  <a className="px-4 py-2 text-lg hover:text-primary transition duration-300">Collection</a>
+                  <span className="px-4 py-2 text-lg hover:text-primary transition duration-300 block cursor-pointer">Collection</span>
                 </Link>
                 <Link href="/#about" onClick={handleClose}>
-                  <a className="px-4 py-2 text-lg hover:text-primary transition duration-300">About</a>
+                  <span className="px-4 py-2 text-lg hover:text-primary transition duration-300 block cursor-pointer">About</span>
                 </Link>
                 <Link href="/#contact" onClick={handleClose}>
-                  <a className="px-4 py-2 text-lg hover:text-primary transition duration-300">Contact</a>
+                  <span className="px-4 py-2 text-lg hover:text-primary transition duration-300 block cursor-pointer">Contact</span>
                 </Link>
               </div>
             </SheetContent>
