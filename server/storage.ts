@@ -1,76 +1,107 @@
-import { orders, type Order, type InsertOrder, admins, type Admin, type InsertAdmin } from "@shared/schema";
+import { orders, type Order, type InsertOrder, users, type User, type InsertUser } from "@shared/schema";
+import { writeFile, mkdir } from "fs/promises";
+import { join, dirname } from "path";
+import { existsSync } from "fs";
 
+// Interface for storage operations
 export interface IStorage {
-  // Order operations
-  getOrder(id: number): Promise<Order | undefined>;
-  getAllOrders(): Promise<Order[]>;
-  createOrder(order: InsertOrder): Promise<Order>;
+  // User operations
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
   
-  // Admin operations
-  getAdmin(id: number): Promise<Admin | undefined>;
-  getAdminByUsername(username: string): Promise<Admin | undefined>;
-  createAdmin(admin: InsertAdmin): Promise<Admin>;
+  // Order operations
+  createOrder(order: InsertOrder): Promise<Order>;
+  getOrders(): Promise<Order[]>;
+  getOrder(id: number): Promise<Order | undefined>;
+  deleteOrder(id: number): Promise<boolean>;
+  
+  // Image handling
+  saveImage(buffer: Buffer, originalName: string): Promise<string>;
 }
 
 export class MemStorage implements IStorage {
+  private users: Map<number, User>;
   private orders: Map<number, Order>;
-  private admins: Map<number, Admin>;
+  private userCurrentId: number;
   private orderCurrentId: number;
-  private adminCurrentId: number;
+  private uploadDir: string;
 
   constructor() {
+    this.users = new Map();
     this.orders = new Map();
-    this.admins = new Map();
+    this.userCurrentId = 1;
     this.orderCurrentId = 1;
-    this.adminCurrentId = 1;
+    this.uploadDir = join(process.cwd(), "uploads");
     
-    // Create a default admin account
-    this.createAdmin({
+    // Create admin user
+    this.createUser({
       username: "admin",
       password: "admin123" // In a real app, this would be hashed
     });
+    
+    // Ensure uploads directory exists
+    if (!existsSync(this.uploadDir)) {
+      mkdir(this.uploadDir, { recursive: true }).catch(err => {
+        console.error("Failed to create uploads directory:", err);
+      });
+    }
   }
 
-  // Order operations
-  async getOrder(id: number): Promise<Order | undefined> {
-    return this.orders.get(id);
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
   }
 
-  async getAllOrders(): Promise<Order[]> {
-    return Array.from(this.orders.values()).sort((a, b) => {
-      // Sort by created date, newest first
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }
-
-  async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const id = this.orderCurrentId++;
-    const now = new Date();
-    const order: Order = { 
-      ...insertOrder, 
-      id,
-      createdAt: now
-    };
-    this.orders.set(id, order);
-    return order;
-  }
-
-  // Admin operations
-  async getAdmin(id: number): Promise<Admin | undefined> {
-    return this.admins.get(id);
-  }
-
-  async getAdminByUsername(username: string): Promise<Admin | undefined> {
-    return Array.from(this.admins.values()).find(
-      (admin) => admin.username === username,
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
     );
   }
 
-  async createAdmin(insertAdmin: InsertAdmin): Promise<Admin> {
-    const id = this.adminCurrentId++;
-    const admin: Admin = { ...insertAdmin, id };
-    this.admins.set(id, admin);
-    return admin;
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.userCurrentId++;
+    const user: User = { ...insertUser, id };
+    this.users.set(id, user);
+    return user;
+  }
+  
+  async createOrder(insertOrder: InsertOrder): Promise<Order> {
+    const id = this.orderCurrentId++;
+    const submittedAt = new Date();
+    const order: Order = { ...insertOrder, id, submittedAt };
+    this.orders.set(id, order);
+    return order;
+  }
+  
+  async getOrders(): Promise<Order[]> {
+    return Array.from(this.orders.values()).sort((a, b) => 
+      b.submittedAt.getTime() - a.submittedAt.getTime()
+    );
+  }
+  
+  async getOrder(id: number): Promise<Order | undefined> {
+    return this.orders.get(id);
+  }
+  
+  async deleteOrder(id: number): Promise<boolean> {
+    return this.orders.delete(id);
+  }
+  
+  async saveImage(buffer: Buffer, originalName: string): Promise<string> {
+    // Create a unique filename
+    const timestamp = Date.now();
+    const fileExt = originalName.split('.').pop();
+    const filename = `${timestamp}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = join(this.uploadDir, filename);
+    
+    // Ensure the directory exists
+    await mkdir(dirname(filePath), { recursive: true });
+    
+    // Write the file
+    await writeFile(filePath, buffer);
+    
+    // Return the relative path
+    return `/uploads/${filename}`;
   }
 }
 

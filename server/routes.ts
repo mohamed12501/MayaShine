@@ -1,163 +1,128 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertOrderSchema } from "@shared/schema";
-import express from "express";
-import path from "path";
-import fs from "fs";
 import multer from "multer";
+import { join } from "path";
+import express from "express";
+import { sessionMiddleware, requireAuth, login, logout, getCurrentUser } from "./auth";
 
-// Setup storage for uploaded images
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage2 = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({ 
-  storage: storage2,
+// Configure multer for handling file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB
   },
-  fileFilter: (req, file, cb) => {
-    // Accept only image files
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
+  fileFilter: (_req, file, cb) => {
+    // Check if the file is an image
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
     }
+    cb(null, true);
   }
 });
-
-// Authentication middleware
-const requireAuth = (req: Request, res: Response, next: Function) => {
-  const { username, password } = req.body;
-  
-  if (req.session && req.session.authenticated) {
-    return next();
-  }
-  
-  return res.status(401).json({ message: "Authentication required" });
-};
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Create a session middleware
-  const session = require('express-session');
-  const MemoryStore = require('memorystore')(session);
-  
-  app.use(session({
-    cookie: { maxAge: 86400000 }, // 24 hours
-    store: new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
-    resave: false,
-    saveUninitialized: false,
-    secret: 'maya-jewelry-secret'
-  }));
-  
   // Serve uploaded files
-  app.use('/uploads', express.static(uploadDir));
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   
-  // API Routes
-  // Submit an order
-  app.post("/api/orders", upload.single('designImage'), async (req, res) => {
+  // Add session middleware
+  app.use(sessionMiddleware);
+  
+  // Auth routes
+  app.post('/api/login', login);
+  app.post('/api/logout', logout);
+  app.get('/api/user', getCurrentUser);
+  
+  // Order submission endpoint
+  app.post('/api/orders', upload.single('image'), async (req: Request, res: Response) => {
     try {
-      const orderData = JSON.parse(req.body.orderData);
+      const { fullName, email, phone, jewelryType, description } = req.body;
       
-      // Validate order data
-      const validatedData = insertOrderSchema.parse(orderData);
-      
-      // Add image URL if uploaded
-      if (req.file) {
-        validatedData.designImageUrl = `/uploads/${req.file.filename}`;
+      // Validate required fields
+      if (!fullName || !email || !phone || !jewelryType || !description) {
+        return res.status(400).json({ message: "All fields are required" });
       }
       
-      // Create order in storage
-      const order = await storage.createOrder(validatedData);
+      // Process image upload if present
+      let imagePath = undefined;
+      if (req.file) {
+        try {
+          imagePath = await storage.saveImage(req.file.buffer, req.file.originalname);
+        } catch (err) {
+          console.error("Error saving image:", err);
+          return res.status(500).json({ message: "Failed to save image" });
+        }
+      }
+      
+      // Create order
+      const order = await storage.createOrder({
+        fullName,
+        email,
+        phone,
+        jewelryType,
+        description,
+        imagePath
+      });
       
       res.status(201).json(order);
     } catch (error) {
-      console.error("Order submission error:", error);
-      res.status(400).json({ message: "Invalid order data", error: error });
+      console.error("Error creating order:", error);
+      res.status(500).json({ message: "Failed to create order" });
     }
   });
   
-  // Login admin
-  app.post("/api/login", async (req, res) => {
+  // Get all orders (admin only)
+  app.get('/api/orders', requireAuth, async (_req: Request, res: Response) => {
     try {
-      const { username, password } = req.body;
-      
-      // Find admin by username
-      const admin = await storage.getAdminByUsername(username);
-      
-      // Check if admin exists and password matches
-      if (admin && admin.password === password) {
-        // Set session data
-        req.session.authenticated = true;
-        req.session.admin = {
-          id: admin.id,
-          username: admin.username
-        };
-        
-        res.status(200).json({ message: "Login successful" });
-      } else {
-        res.status(401).json({ message: "Invalid credentials" });
-      }
+      const orders = await storage.getOrders();
+      res.json(orders);
     } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Login failed", error: error });
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
     }
   });
   
-  // Get all orders (protected)
-  app.get("/api/orders", async (req, res) => {
+  // Get specific order (admin only)
+  app.get('/api/orders/:id', requireAuth, async (req: Request, res: Response) => {
     try {
-      // Authentication check
-      if (!req.session.authenticated) {
-        return res.status(401).json({ message: "Authentication required" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
       }
       
-      const orders = await storage.getAllOrders();
-      res.status(200).json(orders);
+      const order = await storage.getOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(order);
     } catch (error) {
-      console.error("Get orders error:", error);
-      res.status(500).json({ message: "Failed to fetch orders", error: error });
+      console.error("Error fetching order:", error);
+      res.status(500).json({ message: "Failed to fetch order" });
     }
   });
   
-  // Logout
-  app.post("/api/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
+  // Delete an order (admin only)
+  app.delete('/api/orders/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
       }
       
-      res.status(200).json({ message: "Logout successful" });
-    });
+      const success = await storage.deleteOrder(id);
+      if (!success) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json({ message: "Order deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      res.status(500).json({ message: "Failed to delete order" });
+    }
   });
   
-  // Check authentication status
-  app.get("/api/auth/check", (req, res) => {
-    if (req.session.authenticated) {
-      return res.status(200).json({ 
-        authenticated: true,
-        admin: req.session.admin
-      });
-    }
-    
-    return res.status(200).json({ authenticated: false });
-  });
-
   const httpServer = createServer(app);
+  
   return httpServer;
 }
