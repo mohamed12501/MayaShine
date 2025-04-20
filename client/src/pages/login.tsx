@@ -35,8 +35,14 @@ export default function Login() {
   const loginMutation = useMutation({
     mutationFn: (data: LoginValues) => apiRequest('POST', '/api/login', data),
     onSuccess: () => {
+      // Invalidate the user query to refresh authentication state
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      window.location.href = '/admin';
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      
+      // Use a slight delay to ensure the session is fully established
+      setTimeout(() => {
+        window.location.href = '/admin';
+      }, 100);
     },
     onError: (error) => {
       toast({

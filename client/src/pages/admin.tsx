@@ -43,6 +43,8 @@ export default function Admin() {
   const { data: orders, isLoading, error } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
     enabled: !!user, // Only run if user is authenticated
+    queryFn: getQueryFn({ on401: "returnNull" }), // Handle 401 gracefully
+    retry: 1,
   });
   
   // Delete order mutation
@@ -70,7 +72,8 @@ export default function Admin() {
     try {
       await apiRequest('POST', '/api/logout');
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      setLocation('/');
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      window.location.href = '/'; // Use a hard redirect instead of router
     } catch (error) {
       toast({
         title: "Error",
