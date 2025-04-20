@@ -24,20 +24,13 @@ export default function Admin() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
-  // Fetch current user
+  // Fetch current user - no need for redirect, it's handled in App.tsx router
   const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
     queryKey: ['/api/user'],
     retry: false,
     // will return null on 401, not throw
     queryFn: getQueryFn({ on401: "returnNull" })
   });
-
-  // If no user is logged in, redirect to login
-  useEffect(() => {
-    if (!isLoadingUser && !user) {
-      setLocation("/login");
-    }
-  }, [user, isLoadingUser, setLocation]);
   
   // Fetch orders only if user is authenticated
   const { data: orders, isLoading, error } = useQuery<Order[]>({
@@ -107,7 +100,7 @@ export default function Admin() {
     );
   }
   
-  // If not authenticated, user will be redirected via useEffect
+  // If not authenticated, user will be redirected via App.tsx router
   
   return (
     <div className="min-h-screen flex flex-col">
