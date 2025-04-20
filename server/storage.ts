@@ -2,6 +2,8 @@ import { orders, type Order, type InsertOrder, users, type User, type InsertUser
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { existsSync } from "fs";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -20,71 +22,83 @@ export interface IStorage {
   saveImage(buffer: Buffer, originalName: string): Promise<string>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private orders: Map<number, Order>;
-  private userCurrentId: number;
-  private orderCurrentId: number;
-  private uploadDir: string;
-
-  constructor() {
-    this.users = new Map();
-    this.orders = new Map();
-    this.userCurrentId = 1;
-    this.orderCurrentId = 1;
-    this.uploadDir = join(process.cwd(), "uploads");
-    
-    // Create admin user
-    this.createUser({
+// Initialize DB with admin user if needed
+async function initializeDatabase() {
+  const adminUser = await db.select().from(users).where(eq(users.username, "admin"));
+  
+  if (adminUser.length === 0) {
+    await db.insert(users).values({
       username: "admin",
       password: "admin123" // In a real app, this would be hashed
     });
-    
-    // Ensure uploads directory exists
-    if (!existsSync(this.uploadDir)) {
-      mkdir(this.uploadDir, { recursive: true }).catch(err => {
-        console.error("Failed to create uploads directory:", err);
-      });
-    }
+    console.log("Admin user created");
+  }
+  
+  // Ensure uploads directory exists
+  const uploadDir = join(process.cwd(), "uploads");
+  if (!existsSync(uploadDir)) {
+    mkdir(uploadDir, { recursive: true }).catch(err => {
+      console.error("Failed to create uploads directory:", err);
+    });
+  }
+}
+
+// Initialize database on import
+initializeDatabase().catch(err => {
+  console.error("Failed to initialize database:", err);
+});
+
+export class DatabaseStorage implements IStorage {
+  private uploadDir: string;
+
+  constructor() {
+    this.uploadDir = join(process.cwd(), "uploads");
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
   
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const id = this.orderCurrentId++;
-    const submittedAt = new Date();
-    const order: Order = { ...insertOrder, id, submittedAt };
-    this.orders.set(id, order);
+    // Ensure imagePath is null, not undefined
+    const orderData = {
+      ...insertOrder,
+      imagePath: insertOrder.imagePath || null
+    };
+    
+    const [order] = await db
+      .insert(orders)
+      .values(orderData)
+      .returning();
     return order;
   }
   
   async getOrders(): Promise<Order[]> {
-    return Array.from(this.orders.values()).sort((a, b) => 
-      b.submittedAt.getTime() - a.submittedAt.getTime()
-    );
+    return db.select().from(orders).orderBy(orders.submittedAt, 'desc');
   }
   
   async getOrder(id: number): Promise<Order | undefined> {
-    return this.orders.get(id);
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order || undefined;
   }
   
   async deleteOrder(id: number): Promise<boolean> {
-    return this.orders.delete(id);
+    const result = await db.delete(orders).where(eq(orders.id, id)).returning();
+    return result.length > 0;
   }
   
   async saveImage(buffer: Buffer, originalName: string): Promise<string> {
@@ -105,4 +119,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
