@@ -1,9 +1,6 @@
 import { Navbar } from "@/components/navbar";
 import { HeroSection } from "@/components/hero-section";
-import { FeaturesSection } from "@/components/features-section";
-import { GallerySection } from "@/components/gallery-section";
 import { OrderForm } from "@/components/order-form";
-import { TestimonialsSection } from "@/components/testimonials-section";
 import { Footer } from "@/components/footer";
 import { Helmet } from "react-helmet";
 
@@ -20,10 +17,7 @@ export default function Home() {
       
       <main className="flex-grow pt-16">
         <HeroSection />
-        <FeaturesSection />
-        <GallerySection />
         <OrderForm />
-        <TestimonialsSection />
       </main>
       
       <Footer />
