@@ -84,9 +84,9 @@ export function OrderForm() {
     <section id="order" className="py-16 bg-gray-50">
       <div className="container mx-auto px-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-playfair text-center mb-3 text-gray-900">Create Your Custom Piece</h2>
+          <h2 className="text-3xl font-playfair text-center mb-3 text-gray-900">Your Sparkle, One Step Away</h2>
           <p className="text-center text-gray-700/80 font-montserrat mb-10 max-w-2xl mx-auto">
-            Share your vision with us, and our master craftsmen will bring your dream jewelry to life. Fill out the form below to start your custom order.
+            Love something from our social media? Upload a screenshot of the piece you'd like to order, fill in your details, and let MAYA Jewelry handle the rest — elegance delivered to your door.
           </p>
           
           <div className="bg-white p-6 md:p-10 shadow-sm rounded">
@@ -188,7 +188,7 @@ export function OrderForm() {
                       <FormControl>
                         <Textarea 
                           {...field} 
-                          placeholder="Describe your vision, materials, gemstones, or any specific details you'd like for your custom piece."
+                          placeholder="Tell us which social media post or design caught your eye! Include any customization requests or details about size, materials, or other preferences."
                           className="form-input resize-none"
                           rows={4}
                         />
@@ -203,7 +203,7 @@ export function OrderForm() {
                   name="image"
                   render={() => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700/80">Upload Reference Image (Optional)</FormLabel>
+                      <FormLabel className="text-sm font-medium text-gray-700/80">Upload Screenshot from Social Media</FormLabel>
                       <FormControl>
                         <FileInput 
                           id="image" 
