@@ -38,32 +38,32 @@ export function Footer() {
             <ul className="font-montserrat text-sm space-y-2">
               <li>
                 <Link href="/">
-                  <a className="text-gray-300 hover:text-primary transition duration-300">Home</a>
+                  <span className="text-gray-300 hover:text-primary transition duration-300 cursor-pointer block">Home</span>
                 </Link>
               </li>
               <li>
                 <Link href="/#order">
-                  <a className="text-gray-300 hover:text-primary transition duration-300">Custom Order</a>
+                  <span className="text-gray-300 hover:text-primary transition duration-300 cursor-pointer block">Custom Order</span>
                 </Link>
               </li>
               <li>
                 <Link href="/#collection">
-                  <a className="text-gray-300 hover:text-primary transition duration-300">Collection</a>
+                  <span className="text-gray-300 hover:text-primary transition duration-300 cursor-pointer block">Collection</span>
                 </Link>
               </li>
               <li>
                 <Link href="/#about">
-                  <a className="text-gray-300 hover:text-primary transition duration-300">About Us</a>
+                  <span className="text-gray-300 hover:text-primary transition duration-300 cursor-pointer block">About Us</span>
                 </Link>
               </li>
               <li>
                 <Link href="/#contact">
-                  <a className="text-gray-300 hover:text-primary transition duration-300">Contact</a>
+                  <span className="text-gray-300 hover:text-primary transition duration-300 cursor-pointer block">Contact</span>
                 </Link>
               </li>
               <li>
                 <Link href="/login">
-                  <a className="text-gray-300 hover:text-primary transition duration-300">Admin</a>
+                  <span className="text-gray-300 hover:text-primary transition duration-300 cursor-pointer block">Admin</span>
                 </Link>
               </li>
             </ul>

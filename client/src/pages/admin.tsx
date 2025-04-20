@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { formatDate, truncateText } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -11,20 +11,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Order, jewelryTypes } from "@shared/schema";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { AlertTriangle, Eye, Trash2 } from "lucide-react";
+import { AlertTriangle, Eye, Trash2, LogIn } from "lucide-react";
 import { Helmet } from "react-helmet";
+import { useLocation } from "wouter";
 
 export default function Admin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
   const [filterType, setFilterType] = useState<string>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
-  // Fetch orders
+  // Fetch current user
+  const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
+    queryKey: ['/api/user'],
+    retry: false,
+    // will return null on 401, not throw
+    queryFn: getQueryFn({ on401: "returnNull" })
+  });
+
+  // If no user is logged in, redirect to login
+  useEffect(() => {
+    if (!isLoadingUser && !user) {
+      setLocation("/login");
+    }
+  }, [user, isLoadingUser, setLocation]);
+  
+  // Fetch orders only if user is authenticated
   const { data: orders, isLoading, error } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
+    enabled: !!user, // Only run if user is authenticated
   });
   
   // Delete order mutation
@@ -52,7 +70,7 @@ export default function Admin() {
     try {
       await apiRequest('POST', '/api/logout');
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      window.location.href = '/';
+      setLocation('/');
     } catch (error) {
       toast({
         title: "Error",
@@ -69,6 +87,24 @@ export default function Admin() {
   
   // Get selected order
   const selectedOrder = selectedOrderId ? orders?.find(order => order.id === selectedOrderId) : null;
+  
+  // If still loading user, show loading state
+  if (isLoadingUser) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow pt-24 pb-16 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Skeleton className="h-12 w-64 mx-auto" />
+            <Skeleton className="h-32 w-full max-w-lg mx-auto" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+  
+  // If not authenticated, user will be redirected via useEffect
   
   return (
     <div className="min-h-screen flex flex-col">
