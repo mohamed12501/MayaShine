@@ -4,21 +4,21 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
 
+// Conditionally load plugins only in development or Replit
+const plugins = [
+  react(),
+  runtimeErrorOverlay(),
+  themePlugin(),
+];
+
+if (process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined) {
+  const cartographer = require("@replit/vite-plugin-cartographer").cartographer;
+  plugins.push(cartographer());
+}
+
 export default defineConfig({
   base: '/MayaShine/',
-  plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    themePlugin(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-        ]
-      : []),
-  ],
+  plugins,
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -28,7 +28,7 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
   },
 });
