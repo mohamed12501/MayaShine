@@ -18,6 +18,9 @@
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]
-    }
+    },
+    "target": "ESNext",
+    "isolatedModules": true,
+    "resolveJsonModule": true
   }
 }

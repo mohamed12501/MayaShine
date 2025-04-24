@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  jewelry_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  image_path TEXT,
+  submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+); 

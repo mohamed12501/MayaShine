@@ -1,0 +1,11 @@
+{
+    "version": "5",
+    "dialect": "pg",
+    "entries": [{
+        "idx": 0,
+        "version": "5",
+        "hash": "0000_initial",
+        "lastRun": null,
+        "runAt": null
+    }]
+}
